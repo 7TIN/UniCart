@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "Universal Cart",
+  "version": "1.0.0",
+  "description": "Store products in one Universal Cart",
+
+  "icons" : {
+    "16" : "src/assets/react.svg",
+    "48" : "src/assets/react.svg",
+    "128": "src/assets/react.svg"
+    
+  },
+
+  "action": {
+    "default_popup" : "index.html",
+    "default_icon" : {
+    "16" : "src/assets/react.svg",
+    "48" : "src/assets/react.svg",
+    "128": "src/assets/react.svg"
+
+    }
+
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+
+  "host_permission": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "src/background.ts",
+    "type": "module"
+  },
+
+  "content_script" : [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content.ts"]
+    }
+  ]
+}
