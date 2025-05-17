@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import UniversalCart from "./components/UniversalCart";
+import UniversalCart from "./components/Cart";
 
 function App (){
 

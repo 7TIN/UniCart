@@ -1,5 +1,8 @@
+import React, { useState, useMemo } from 'react';
+import ProductCard from './ProductCard';
 import EmptyState from "./EmptyState";
 import Header from "./Header";
+import { FilterOptions } from '../types';
 
 const UniversalCart : React.FC = () => {
     return(
