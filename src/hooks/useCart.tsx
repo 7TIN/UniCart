@@ -4,28 +4,28 @@ import { CartAction, CartActionTypes, CartState } from "../types";
 const initialState: CartState = {
   products: [],
   loading: false,
-  error: null
+  error: null,
 };
 
 function cartReducer(state: CartState, action: CartAction): CartState {
-    switch (action.type) {
+  switch (action.type) {
     case CartActionTypes.GET_PRODUCTS_REQUEST:
       return {
         ...state,
         loading: true,
-        error: null
+        error: null,
       };
     case CartActionTypes.GET_PRODUCTS_SUCCESS:
       return {
         ...state,
         products: action.payload,
-        loading: false
+        loading: false,
       };
     case CartActionTypes.GET_PRODUCTS_FAILURE:
       return {
         ...state,
         loading: false,
-        error: action.payload
+        error: action.payload,
       };
     case CartActionTypes.ADD_PRODUCT_SUCCESS:
       return {
@@ -35,28 +35,28 @@ function cartReducer(state: CartState, action: CartAction): CartState {
     case CartActionTypes.REMOVE_PRODUCT_SUCCESS:
       return {
         ...state,
-        products: state.products.filter(p => p.id !== action.payload)
+        products: state.products.filter((p) => p.id !== action.payload),
       };
     case CartActionTypes.UPDATE_PRODUCT_SUCCESS:
       return {
         ...state,
-        products: state.products.map(p => 
+        products: state.products.map((p) =>
           p.id === action.payload.id ? action.payload : p
-        )
+        ),
       };
     case CartActionTypes.MOVE_TO_WISHLIST:
       return {
         ...state,
-        products: state.products.map(p => 
+        products: state.products.map((p) =>
           p.id === action.payload ? { ...p, inWishlist: true } : p
-        )
+        ),
       };
     case CartActionTypes.MOVE_TO_CART:
       return {
         ...state,
-        products: state.products.map(p => 
+        products: state.products.map((p) =>
           p.id === action.payload ? { ...p, inWishlist: false } : p
-        )
+        ),
       };
     default:
       return state;
@@ -73,19 +73,19 @@ export function useCart() {
   const fetchProducts = useCallback(async () => {
     try {
       dispatch({ type: CartActionTypes.GET_PRODUCTS_REQUEST });
-      
+
       const response = await chrome.runtime.sendMessage({
-        type: 'GET_PRODUCTS'
+        type: "GET_PRODUCTS",
       });
-      
-      dispatch({ 
-        type: CartActionTypes.GET_PRODUCTS_SUCCESS, 
-        payload: response.products 
+
+      dispatch({
+        type: CartActionTypes.GET_PRODUCTS_SUCCESS,
+        payload: response.products,
       });
     } catch (error) {
-      dispatch({ 
-        type: CartActionTypes.GET_PRODUCTS_FAILURE, 
-        payload: 'Failed to fetch products' 
+      dispatch({
+        type: CartActionTypes.GET_PRODUCTS_FAILURE,
+        payload: "Failed to fetch products",
       });
     }
   }, []);
