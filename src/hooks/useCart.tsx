@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer } from "react";
-import { CartAction, CartActionTypes, CartState } from "../types";
+import { CartAction, CartActionTypes, CartState, Product } from "../types";
 
 const initialState: CartState = {
   products: [],
@@ -87,6 +87,30 @@ export function useCart() {
         type: CartActionTypes.GET_PRODUCTS_FAILURE,
         payload: "Failed to fetch products",
       });
+    }
+  }, []);
+
+  const addProduct = useCallback(async (product: Product) => {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: "ADD_PRODUCT",
+        product,
+      });
+
+      if (response.success) {
+        dispatch({
+          type: CartActionTypes.ADD_PRODUCT_SUCCESS,
+          payload: response.product,
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      dispatch({
+        type: CartActionTypes.ADD_PRODUCT_FAILURE,
+        payload: "Failed to add product",
+      });
+      return false;
     }
   }, []);
 }
