@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useReducer } from "react";
-import { CartAction, CartActionTypes, CartState, Product } from "../types";
+import {
+  CartAction,
+  CartActionTypes,
+  CartState,
+  FilterOptions,
+  Product,
+} from "../types";
 
 const initialState: CartState = {
   products: [],
@@ -117,22 +123,22 @@ export function useCart() {
   const removeProduct = useCallback(async (productId: string) => {
     try {
       const response = await chrome.runtime.sendMessage({
-        type: 'REMOVE_PRODUCT',
-        productId
+        type: "REMOVE_PRODUCT",
+        productId,
       });
-      
+
       if (response.success) {
-        dispatch({ 
-          type: CartActionTypes.REMOVE_PRODUCT_SUCCESS, 
-          payload: productId 
+        dispatch({
+          type: CartActionTypes.REMOVE_PRODUCT_SUCCESS,
+          payload: productId,
         });
         return true;
       }
       return false;
     } catch (error) {
-      dispatch({ 
-        type: CartActionTypes.REMOVE_PRODUCT_FAILURE, 
-        payload: 'Failed to remove product' 
+      dispatch({
+        type: CartActionTypes.REMOVE_PRODUCT_FAILURE,
+        payload: "Failed to remove product",
       });
       return false;
     }
@@ -141,68 +147,133 @@ export function useCart() {
   const updateProduct = useCallback(async (product: Product) => {
     try {
       const response = await chrome.runtime.sendMessage({
-        type: 'UPDATE_PRODUCT',
-        product
+        type: "UPDATE_PRODUCT",
+        product,
       });
-      
+
       if (response.success) {
-        dispatch({ 
-          type: CartActionTypes.UPDATE_PRODUCT_SUCCESS, 
-          payload: response.product 
+        dispatch({
+          type: CartActionTypes.UPDATE_PRODUCT_SUCCESS,
+          payload: response.product,
         });
         return true;
       }
       return false;
     } catch (error) {
-      dispatch({ 
-        type: CartActionTypes.UPDATE_PRODUCT_FAILURE, 
-        payload: 'Failed to update product' 
+      dispatch({
+        type: CartActionTypes.UPDATE_PRODUCT_FAILURE,
+        payload: "Failed to update product",
       });
       return false;
     }
   }, []);
 
-  const moveToWishlist = useCallback(async (productId: string) => {
+  const moveToWishlist = useCallback(
+    async (productId: string) => {
+      const product = state.products.find((p) => p.id === productId);
 
-    const product = state.products.find(p => p.id === productId);
-    
-    if (product) {
-      
-      const updated = { ...product, inWishlist: true };
-      const success = await updateProduct(updated);
-      
-      if (success) {
-        dispatch({ type: CartActionTypes.MOVE_TO_WISHLIST, payload: productId });
+      if (product) {
+        const updated = { ...product, inWishlist: true };
+        const success = await updateProduct(updated);
+
+        if (success) {
+          dispatch({
+            type: CartActionTypes.MOVE_TO_WISHLIST,
+            payload: productId,
+          });
+        }
       }
-    }
-  }, [state.products, updateProduct]);
+    },
+    [state.products, updateProduct]
+  );
 
-    const moveToCart = useCallback(async (productId: string) => {
+  const moveToCart = useCallback(
+    async (productId: string) => {
+      const product = state.products.find((p) => p.id === productId);
 
-    const product = state.products.find(p => p.id === productId);
-    
-    if (product) {
-      
-      const updated = { ...product, inWishlist: false};
-      const success = await updateProduct(updated);
-      
-      if (success) {
-        dispatch({ type: CartActionTypes.MOVE_TO_CART, payload: productId });
+      if (product) {
+        const updated = { ...product, inWishlist: false };
+        const success = await updateProduct(updated);
+
+        if (success) {
+          dispatch({ type: CartActionTypes.MOVE_TO_CART, payload: productId });
+        }
       }
+    },
+    [state.products, updateProduct]
+  );
+
+  const updateQuantity = useCallback(
+    async (productId: string, quantity: number) => {
+      const product = state.products.find((p) => p.id === productId);
+
+      if (product) {
+        const updated = { ...product, quantity: Math.max(1, quantity) };
+        await updateProduct(updated);
+      }
+    },
+    [state.products, updateProduct]
+  );
+
+  const filterProducts = useCallback((options: FilterOptions) => {
+    let filtered = [...state.products];
+
+    if (options.showWishlist !== undefined) {
+      filtered = filtered.filter((p) => p.inWishlist === options.showWishlist);
     }
-  }, [state.products, updateProduct]);
 
-  const updateQuantity = useCallback(async (productId : string, quantity: number) => {
-
-    const product = state.products.find(p => p.id === productId);
-
-    if (product){
-      const updated = {...product, quantity: Math.max(1,quantity)};
-      await updateProduct(updated);
+    if (options.category) {
+      filtered = filtered.filter((p) => p.category === options.category);
     }
-  }, [state.products, updateProduct]); 
 
+    if (options.source) {
+      filtered = filtered.filter((p) => p.source === options.source);
+    }
 
+    if (options.priceRange) {
+      filtered = filtered.filter((p) => {
+        const price = parseFloat(p.price.replace(/[^0-9.]/g, ""));
+        return (
+          price >= options.priceRange![0] && price <= options.priceRange![1]
+        );
+      });
+    }
 
+    if (options.searchQuery) {
+      const query = options.searchQuery.toLowerCase();
 
+      filtered = filtered.filter(
+        (p) =>
+          p.name.toLowerCase().includes(query) ||
+          p.description?.toLowerCase().includes(query)
+      );
+    }
+
+    if (options.sortBy){
+      filtered.sort((a,b) => {
+         switch (options.sortBy){
+          case 'price':
+            const priceA = parseFloat(a.price.replace(/[^0-9.]/g,''));
+            const priceB = parseFloat(b.price.replace(/[^0-9.]/g,''));
+            return options.sortOrder === 'asc' ? priceA - priceB : priceB - priceA;
+          case 'name':
+            return options.sortOrder === 'asc' ? 
+            a.name.localeCompare(b.name) :
+            b.name.localeCompare(a.name);
+          case 'date':
+            const dateA = new Date(a.addedAt || '').getTime();
+            const dateB = new Date(b.addedAt || '').getTime();
+            return options.sortOrder === 'asc' ? dateA - dateB : dateB - dateA; 
+          case 'source':
+            return options.sortOrder === 'asc' ? 
+            a.source.localeCompare(b.source) :
+            b.source.localeCompare(a.source);
+
+          default :
+          return 0;
+         }
+      });
+    }
+    return filtered;
+  }, [state.products]);
 }
