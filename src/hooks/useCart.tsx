@@ -113,4 +113,96 @@ export function useCart() {
       return false;
     }
   }, []);
+
+  const removeProduct = useCallback(async (productId: string) => {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'REMOVE_PRODUCT',
+        productId
+      });
+      
+      if (response.success) {
+        dispatch({ 
+          type: CartActionTypes.REMOVE_PRODUCT_SUCCESS, 
+          payload: productId 
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      dispatch({ 
+        type: CartActionTypes.REMOVE_PRODUCT_FAILURE, 
+        payload: 'Failed to remove product' 
+      });
+      return false;
+    }
+  }, []);
+
+  const updateProduct = useCallback(async (product: Product) => {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'UPDATE_PRODUCT',
+        product
+      });
+      
+      if (response.success) {
+        dispatch({ 
+          type: CartActionTypes.UPDATE_PRODUCT_SUCCESS, 
+          payload: response.product 
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      dispatch({ 
+        type: CartActionTypes.UPDATE_PRODUCT_FAILURE, 
+        payload: 'Failed to update product' 
+      });
+      return false;
+    }
+  }, []);
+
+  const moveToWishlist = useCallback(async (productId: string) => {
+
+    const product = state.products.find(p => p.id === productId);
+    
+    if (product) {
+      
+      const updated = { ...product, inWishlist: true };
+      const success = await updateProduct(updated);
+      
+      if (success) {
+        dispatch({ type: CartActionTypes.MOVE_TO_WISHLIST, payload: productId });
+      }
+    }
+  }, [state.products, updateProduct]);
+
+    const moveToCart = useCallback(async (productId: string) => {
+
+    const product = state.products.find(p => p.id === productId);
+    
+    if (product) {
+      
+      const updated = { ...product, inWishlist: false};
+      const success = await updateProduct(updated);
+      
+      if (success) {
+        dispatch({ type: CartActionTypes.MOVE_TO_CART, payload: productId });
+      }
+    }
+  }, [state.products, updateProduct]);
+
+  const updateQuantity = useCallback(async (productId : string, quantity: number) => {
+
+    const product = state.products.find(p => p.id === productId);
+
+    if (product){
+      const updated = {...product, quantity: Math.max(1,quantity)};
+      await updateProduct(updated);
+    }
+  }, [state.products, updateProduct]); 
+
+
+
+
 }
