@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer } from "react";
+import { useCallback, useEffect, useMemo, useReducer } from "react";
 import {
   CartAction,
   CartActionTypes,
@@ -276,4 +276,63 @@ export function useCart() {
     }
     return filtered;
   }, [state.products]);
+  
+  const categories = useMemo(() => {
+    const categorySet = new Set<string>();
+    state.products.forEach(p => {
+      if (p.category){
+        categorySet.add(p.category);
+      }
+    });
+    return Array.from(categorySet);
+  }, [state.products]);
+
+    const sources = useMemo(() => {
+    const sourceSet = new Set<string>();
+    state.products.forEach(p => {
+      if (p.category){
+        sourceSet.add(p.source);
+      }
+    });
+    return Array.from(sourceSet);
+  }, [state.products]);
+
+  const cartTotals = useMemo(() => {
+    const cartItems = state.products.filter( p => !p.inWishlist);
+    const WishlistItems = state.products.filter( p => !p.inWishlist);
+
+    let cartTotal = 0;
+
+    cartItems.forEach( item => {
+      const price = parseFloat(item.price.replace(/[^0-9.]/g,''));
+      const quantity = item.quantity || 1;
+
+      if (!isNaN(price)) {
+        cartTotal +=price * quantity; 
+      }
+    });
+
+    return{
+      cartCount : cartItems.length,
+      WishlistCount : WishlistItems.length,
+      totalPrice : cartTotal.toFixed(2)
+    };
+  }, [state.products]);
+
+  return{
+    products: state.products,
+    loading: state.loading,
+    error: state.error,
+    fetchProducts,
+    addProduct,
+    removeProduct,
+    updateProduct,
+    moveToWishlist,
+    moveToCart,
+    updateQuantity,
+    filterProducts,
+    categories,
+    sources,
+    cartTotals
+  };
 }
