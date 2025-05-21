@@ -1,18 +1,20 @@
-import { useCallback, useEffect, useMemo, useReducer } from "react";
+import { useReducer, useEffect, useCallback, useMemo } from "react";
 import {
+  CartState,
   CartAction,
   CartActionTypes,
-  CartState,
-  FilterOptions,
   Product,
+  FilterOptions,
 } from "../types";
 
+// Initial state for cart
 const initialState: CartState = {
   products: [],
   loading: false,
   error: null,
 };
 
+// Reducer function for cart state
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case CartActionTypes.GET_PRODUCTS_REQUEST:
@@ -24,7 +26,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
     case CartActionTypes.GET_PRODUCTS_SUCCESS:
       return {
         ...state,
-        products: action.payload,
+        products: Array.isArray(action.payload) ? action.payload : [],
         loading: false,
       };
     case CartActionTypes.GET_PRODUCTS_FAILURE:
@@ -32,6 +34,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         ...state,
         loading: false,
         error: action.payload,
+        products: [], // Reset to empty array on error
       };
     case CartActionTypes.ADD_PRODUCT_SUCCESS:
       return {
@@ -69,16 +72,27 @@ function cartReducer(state: CartState, action: CartAction): CartState {
   }
 }
 
+// Custom hook for cart operations
 export function useCart() {
   const [state, dispatch] = useReducer(cartReducer, initialState);
 
+  // Fetch products on mount
   useEffect(() => {
     fetchProducts();
   }, []);
 
+  // Fetch all products from extension storage
   const fetchProducts = useCallback(async () => {
     try {
       dispatch({ type: CartActionTypes.GET_PRODUCTS_REQUEST });
+
+      if (!chrome?.runtime?.sendMessage) {
+        dispatch({
+          type: CartActionTypes.GET_PRODUCTS_SUCCESS,
+          payload: [],
+        });
+        return;
+      }
 
       const response = await chrome.runtime.sendMessage({
         type: "GET_PRODUCTS",
@@ -86,7 +100,7 @@ export function useCart() {
 
       dispatch({
         type: CartActionTypes.GET_PRODUCTS_SUCCESS,
-        payload: response.products,
+        payload: Array.isArray(response?.products) ? response.products : [],
       });
     } catch (error) {
       dispatch({
@@ -96,14 +110,17 @@ export function useCart() {
     }
   }, []);
 
+  // Add a product to cart
   const addProduct = useCallback(async (product: Product) => {
     try {
+      if (!chrome?.runtime?.sendMessage) return false;
+
       const response = await chrome.runtime.sendMessage({
         type: "ADD_PRODUCT",
         product,
       });
 
-      if (response.success) {
+      if (response?.success) {
         dispatch({
           type: CartActionTypes.ADD_PRODUCT_SUCCESS,
           payload: response.product,
@@ -120,14 +137,17 @@ export function useCart() {
     }
   }, []);
 
+  // Remove a product from cart
   const removeProduct = useCallback(async (productId: string) => {
     try {
+      if (!chrome?.runtime?.sendMessage) return false;
+
       const response = await chrome.runtime.sendMessage({
         type: "REMOVE_PRODUCT",
         productId,
       });
 
-      if (response.success) {
+      if (response?.success) {
         dispatch({
           type: CartActionTypes.REMOVE_PRODUCT_SUCCESS,
           payload: productId,
@@ -144,14 +164,17 @@ export function useCart() {
     }
   }, []);
 
+  // Update a product in cart
   const updateProduct = useCallback(async (product: Product) => {
     try {
+      if (!chrome?.runtime?.sendMessage) return false;
+
       const response = await chrome.runtime.sendMessage({
         type: "UPDATE_PRODUCT",
         product,
       });
 
-      if (response.success) {
+      if (response?.success) {
         dispatch({
           type: CartActionTypes.UPDATE_PRODUCT_SUCCESS,
           payload: response.product,
@@ -168,14 +191,13 @@ export function useCart() {
     }
   }, []);
 
+  // Move product to wishlist
   const moveToWishlist = useCallback(
     async (productId: string) => {
       const product = state.products.find((p) => p.id === productId);
-
       if (product) {
         const updated = { ...product, inWishlist: true };
         const success = await updateProduct(updated);
-
         if (success) {
           dispatch({
             type: CartActionTypes.MOVE_TO_WISHLIST,
@@ -187,14 +209,13 @@ export function useCart() {
     [state.products, updateProduct]
   );
 
+  // Move product from wishlist to cart
   const moveToCart = useCallback(
     async (productId: string) => {
       const product = state.products.find((p) => p.id === productId);
-
       if (product) {
         const updated = { ...product, inWishlist: false };
         const success = await updateProduct(updated);
-
         if (success) {
           dispatch({ type: CartActionTypes.MOVE_TO_CART, payload: productId });
         }
@@ -203,10 +224,10 @@ export function useCart() {
     [state.products, updateProduct]
   );
 
+  // Update product quantity
   const updateQuantity = useCallback(
     async (productId: string, quantity: number) => {
       const product = state.products.find((p) => p.id === productId);
-
       if (product) {
         const updated = { ...product, quantity: Math.max(1, quantity) };
         await updateProduct(updated);
@@ -215,24 +236,29 @@ export function useCart() {
     [state.products, updateProduct]
   );
 
+  // Filter and sort products
   const filterProducts = useCallback(
     (options: FilterOptions) => {
       let filtered = [...state.products];
 
+      // Filter by wishlist
       if (options.showWishlist !== undefined) {
         filtered = filtered.filter(
           (p) => p.inWishlist === options.showWishlist
         );
       }
 
+      // Filter by category
       if (options.category) {
         filtered = filtered.filter((p) => p.category === options.category);
       }
 
+      // Filter by source (website)
       if (options.source) {
         filtered = filtered.filter((p) => p.source === options.source);
       }
 
+      // Filter by price range
       if (options.priceRange) {
         filtered = filtered.filter((p) => {
           const price = parseFloat(p.price.replace(/[^0-9.]/g, ""));
@@ -242,9 +268,9 @@ export function useCart() {
         });
       }
 
+      // Filter by search query
       if (options.searchQuery) {
         const query = options.searchQuery.toLowerCase();
-
         filtered = filtered.filter(
           (p) =>
             p.name.toLowerCase().includes(query) ||
@@ -252,6 +278,7 @@ export function useCart() {
         );
       }
 
+      // Sort products
       if (options.sortBy) {
         filtered.sort((a, b) => {
           switch (options.sortBy) {
@@ -275,47 +302,42 @@ export function useCart() {
               return options.sortOrder === "asc"
                 ? a.source.localeCompare(b.source)
                 : b.source.localeCompare(a.source);
-
             default:
               return 0;
           }
         });
       }
+
       return filtered;
     },
     [state.products]
   );
 
+  // Get unique categories
   const categories = useMemo(() => {
     const categorySet = new Set<string>();
     state.products.forEach((p) => {
-      if (p.category) {
-        categorySet.add(p.category);
-      }
+      if (p.category) categorySet.add(p.category);
     });
     return Array.from(categorySet);
   }, [state.products]);
 
+  // Get unique sources (websites)
   const sources = useMemo(() => {
     const sourceSet = new Set<string>();
-    state.products.forEach((p) => {
-      if (p.category) {
-        sourceSet.add(p.source);
-      }
-    });
+    state.products.forEach((p) => sourceSet.add(p.source));
     return Array.from(sourceSet);
   }, [state.products]);
 
+  // Calculate cart totals
   const cartTotals = useMemo(() => {
     const cartItems = state.products.filter((p) => !p.inWishlist);
-    const wishlistItems = state.products.filter((p) => !p.inWishlist);
+    const wishlistItems = state.products.filter((p) => p.inWishlist);
 
     let cartTotal = 0;
-
     cartItems.forEach((item) => {
       const price = parseFloat(item.price.replace(/[^0-9.]/g, ""));
       const quantity = item.quantity || 1;
-
       if (!isNaN(price)) {
         cartTotal += price * quantity;
       }
