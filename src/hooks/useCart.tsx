@@ -215,82 +215,91 @@ export function useCart() {
     [state.products, updateProduct]
   );
 
-  const filterProducts = useCallback((options: FilterOptions) => {
-    let filtered = [...state.products];
+  const filterProducts = useCallback(
+    (options: FilterOptions) => {
+      let filtered = [...state.products];
 
-    if (options.showWishlist !== undefined) {
-      filtered = filtered.filter((p) => p.inWishlist === options.showWishlist);
-    }
-
-    if (options.category) {
-      filtered = filtered.filter((p) => p.category === options.category);
-    }
-
-    if (options.source) {
-      filtered = filtered.filter((p) => p.source === options.source);
-    }
-
-    if (options.priceRange) {
-      filtered = filtered.filter((p) => {
-        const price = parseFloat(p.price.replace(/[^0-9.]/g, ""));
-        return (
-          price >= options.priceRange![0] && price <= options.priceRange![1]
+      if (options.showWishlist !== undefined) {
+        filtered = filtered.filter(
+          (p) => p.inWishlist === options.showWishlist
         );
-      });
-    }
+      }
 
-    if (options.searchQuery) {
-      const query = options.searchQuery.toLowerCase();
+      if (options.category) {
+        filtered = filtered.filter((p) => p.category === options.category);
+      }
 
-      filtered = filtered.filter(
-        (p) =>
-          p.name.toLowerCase().includes(query) ||
-          p.description?.toLowerCase().includes(query)
-      );
-    }
+      if (options.source) {
+        filtered = filtered.filter((p) => p.source === options.source);
+      }
 
-    if (options.sortBy){
-      filtered.sort((a,b) => {
-         switch (options.sortBy){
-          case 'price':
-            const priceA = parseFloat(a.price.replace(/[^0-9.]/g,''));
-            const priceB = parseFloat(b.price.replace(/[^0-9.]/g,''));
-            return options.sortOrder === 'asc' ? priceA - priceB : priceB - priceA;
-          case 'name':
-            return options.sortOrder === 'asc' ? 
-            a.name.localeCompare(b.name) :
-            b.name.localeCompare(a.name);
-          case 'date':
-            const dateA = new Date(a.addedAt || '').getTime();
-            const dateB = new Date(b.addedAt || '').getTime();
-            return options.sortOrder === 'asc' ? dateA - dateB : dateB - dateA; 
-          case 'source':
-            return options.sortOrder === 'asc' ? 
-            a.source.localeCompare(b.source) :
-            b.source.localeCompare(a.source);
+      if (options.priceRange) {
+        filtered = filtered.filter((p) => {
+          const price = parseFloat(p.price.replace(/[^0-9.]/g, ""));
+          return (
+            price >= options.priceRange![0] && price <= options.priceRange![1]
+          );
+        });
+      }
 
-          default :
-          return 0;
-         }
-      });
-    }
-    return filtered;
-  }, [state.products]);
-  
+      if (options.searchQuery) {
+        const query = options.searchQuery.toLowerCase();
+
+        filtered = filtered.filter(
+          (p) =>
+            p.name.toLowerCase().includes(query) ||
+            p.description?.toLowerCase().includes(query)
+        );
+      }
+
+      if (options.sortBy) {
+        filtered.sort((a, b) => {
+          switch (options.sortBy) {
+            case "price":
+              const priceA = parseFloat(a.price.replace(/[^0-9.]/g, ""));
+              const priceB = parseFloat(b.price.replace(/[^0-9.]/g, ""));
+              return options.sortOrder === "asc"
+                ? priceA - priceB
+                : priceB - priceA;
+            case "name":
+              return options.sortOrder === "asc"
+                ? a.name.localeCompare(b.name)
+                : b.name.localeCompare(a.name);
+            case "date":
+              const dateA = new Date(a.addedAt || "").getTime();
+              const dateB = new Date(b.addedAt || "").getTime();
+              return options.sortOrder === "asc"
+                ? dateA - dateB
+                : dateB - dateA;
+            case "source":
+              return options.sortOrder === "asc"
+                ? a.source.localeCompare(b.source)
+                : b.source.localeCompare(a.source);
+
+            default:
+              return 0;
+          }
+        });
+      }
+      return filtered;
+    },
+    [state.products]
+  );
+
   const categories = useMemo(() => {
     const categorySet = new Set<string>();
-    state.products.forEach(p => {
-      if (p.category){
+    state.products.forEach((p) => {
+      if (p.category) {
         categorySet.add(p.category);
       }
     });
     return Array.from(categorySet);
   }, [state.products]);
 
-    const sources = useMemo(() => {
+  const sources = useMemo(() => {
     const sourceSet = new Set<string>();
-    state.products.forEach(p => {
-      if (p.category){
+    state.products.forEach((p) => {
+      if (p.category) {
         sourceSet.add(p.source);
       }
     });
@@ -298,28 +307,28 @@ export function useCart() {
   }, [state.products]);
 
   const cartTotals = useMemo(() => {
-    const cartItems = state.products.filter( p => !p.inWishlist);
-    const wishlistItems = state.products.filter( p => !p.inWishlist);
+    const cartItems = state.products.filter((p) => !p.inWishlist);
+    const wishlistItems = state.products.filter((p) => !p.inWishlist);
 
     let cartTotal = 0;
 
-    cartItems.forEach( item => {
-      const price = parseFloat(item.price.replace(/[^0-9.]/g,''));
+    cartItems.forEach((item) => {
+      const price = parseFloat(item.price.replace(/[^0-9.]/g, ""));
       const quantity = item.quantity || 1;
 
       if (!isNaN(price)) {
-        cartTotal +=price * quantity; 
+        cartTotal += price * quantity;
       }
     });
 
-    return{
-      cartCount : cartItems.length,
-      wishlistCount : wishlistItems.length,
-      totalPrice : cartTotal.toFixed(2)
+    return {
+      cartCount: cartItems.length,
+      wishlistCount: wishlistItems.length,
+      totalPrice: cartTotal.toFixed(2),
     };
   }, [state.products]);
 
-  return{
+  return {
     products: state.products,
     loading: state.loading,
     error: state.error,
@@ -333,6 +342,6 @@ export function useCart() {
     filterProducts,
     categories,
     sources,
-    cartTotals
+    cartTotals,
   };
 }
