@@ -299,7 +299,7 @@ export function useCart() {
 
   const cartTotals = useMemo(() => {
     const cartItems = state.products.filter( p => !p.inWishlist);
-    const WishlistItems = state.products.filter( p => !p.inWishlist);
+    const wishlistItems = state.products.filter( p => !p.inWishlist);
 
     let cartTotal = 0;
 
@@ -314,7 +314,7 @@ export function useCart() {
 
     return{
       cartCount : cartItems.length,
-      WishlistCount : WishlistItems.length,
+      wishlistCount : wishlistItems.length,
       totalPrice : cartTotal.toFixed(2)
     };
   }, [state.products]);

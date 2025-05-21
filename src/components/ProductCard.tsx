@@ -105,7 +105,7 @@ const ProductCard : React.FC<ProductCardProps> = ({ product, onRemove, onMoveToW
         {!product.inWishlist && (
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-              <button 
+              <button title ="minus"
                 onClick={() => onUpdateQuantity(product.id!, quantity - 1)}
                 className="px-2 py-1 bg-gray-50 text-gray-500 hover:bg-gray-100"
                 disabled={quantity <= 1}
@@ -113,7 +113,7 @@ const ProductCard : React.FC<ProductCardProps> = ({ product, onRemove, onMoveToW
                 <Minus size={16} />
               </button>
               <span className="px-3 py-1">{quantity}</span>
-              <button 
+              <button title="plus"
                 onClick={() => onUpdateQuantity(product.id!, quantity + 1)}
                 className="px-2 py-1 bg-gray-50 text-gray-500 hover:bg-gray-100"
               >
@@ -136,3 +136,4 @@ const ProductCard : React.FC<ProductCardProps> = ({ product, onRemove, onMoveToW
     </div>
     );
 };
+export default ProductCard;
